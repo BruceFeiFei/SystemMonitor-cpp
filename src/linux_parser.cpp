@@ -48,7 +48,8 @@ string LinuxParser::Kernel() {
     std::istringstream linestream(line);
     linestream >> os >> version >> kernel;
   }
-  return version;
+  stream.close();
+  return kernel;
 }
 
 
@@ -97,6 +98,7 @@ float LinuxParser::MemoryUtilization() {
   float res = (total - free) / total;
   long ans = res * 1000;
   res = ans / 1000.0;
+  stream.close();
   return float(res);
 }
 
@@ -110,6 +112,7 @@ long LinuxParser::UpTime() {
     std::istringstream linestream(line);
     linestream >> uptime;
   }
+  stream.close();
   return stol(uptime);
 }
 
@@ -128,6 +131,7 @@ long LinuxParser::ActiveJiffies(int pid) {
       values.push_back(value);
     }
   }
+  stream.close();
   return stol(values[13] + values[14]);
 }
 
@@ -158,6 +162,7 @@ vector<string> LinuxParser::CpuUtilization() {
       cpu_used.push_back(used);
     }
   }
+  stream.close();
   return cpu_used;
 }
 
@@ -178,6 +183,7 @@ int LinuxParser::TotalProcesses() {
       }
     }
   }
+  stream.close();
   return 0;
 }
 
@@ -191,6 +197,7 @@ int LinuxParser::RunningProcesses() {
       while (linestream >> name) {
         if (name == "procs_running") {
           linestream >> process_running;
+          stream.close();
           return process_running;
         } else {
           break;
@@ -198,6 +205,7 @@ int LinuxParser::RunningProcesses() {
       }
     }
   }
+  stream.close();
   return 0;
 }
 
@@ -207,6 +215,7 @@ string LinuxParser::Command(int pid) {
   if (stream.is_open()) {
     std::getline(stream, line);
   }
+  stream.close();
   return line;
 }
 
@@ -220,11 +229,13 @@ string LinuxParser::Ram(int pid) {
       while (stringline >> key) {
         if (key == "VmSize") {
           stringline >> value;
+          stream.close();
           return to_string(stol(value) / 1024);
         }
       }
     }
   }
+  stream.close();
   return "0";
 }
 
@@ -238,11 +249,13 @@ string LinuxParser::Uid(int pid) {
       while (streamline >> key) {
         if (key == "Uid") {
           streamline >> value;
+          stream.close();
           return value;
         }
       }
     }
   }
+  stream.close();
   return string();
 }
 
@@ -255,11 +268,13 @@ string LinuxParser::User(int pid) {
       std::istringstream streamline(line);
       while (streamline >> key >> x >> value) {
         if (value == LinuxParser::Uid(pid)) {
+          stream.close();
           return key;
         }
       }
     }
   }
+  stream.close();
   return string();
 }
 
@@ -274,7 +289,9 @@ long LinuxParser::UpTime(int pid) {
       count++;
       if (count == 22) break;
     }
+    stream.close();
     return LinuxParser::UpTime() - (stol(value) / 100);
   }
+  stream.close();
   return 0;
 }
