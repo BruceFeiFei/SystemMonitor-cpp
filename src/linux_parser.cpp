@@ -16,17 +16,30 @@ using std::string;
 using std::to_string;
 using std::vector;
 
-template<typename T>
-T findValueByKey(std::string const &keyFilter, std::string const &filename){
+template <typename T>
+T getValueOfFile(std::string const &filename) {
+  std::string line;
+  T value;
+
+  std::ifstream stream(LinuxParser::kProcDirectory + filename);
+  if (stream.is_open()) {
+    std::getline(stream, line);
+    std::istringstream linestream(line);
+    linestream >> value;
+  }
+  return value;
+};
+template <typename T>
+T findValueByKey(std::string const &keyFilter, std::string const &filename) {
   std::string line, key;
   T value;
 
   std::ifstream stream(LinuxParser::kProcDirectory + filename);
-  if(stream.is_open()){
-    while(std::getline(stream, line)){
+  if (stream.is_open()) {
+    while (std::getline(stream, line)) {
       std::istringstream linestream(line);
-      while(linestream>>key>>value){
-        if(key == keyFilter){
+      while (linestream >> key >> value) {
+        if (key == keyFilter) {
           return value;
         }
       }
@@ -57,7 +70,6 @@ string LinuxParser::OperatingSystem() {
   return value;
 }
 
-
 string LinuxParser::Kernel() {
   string os, kernel, version;
   string line;
@@ -71,11 +83,10 @@ string LinuxParser::Kernel() {
   return kernel;
 }
 
-
 vector<int> LinuxParser::Pids() {
   vector<int> pids;
-  DIR* directory = opendir(kProcDirectory.c_str());
-  struct dirent* file;
+  DIR *directory = opendir(kProcDirectory.c_str());
+  struct dirent *file;
   while ((file = readdir(directory)) != nullptr) {
     // Is this a directory?
     if (file->d_type == DT_DIR) {
@@ -96,9 +107,8 @@ float LinuxParser::MemoryUtilization() {
   std::string memFree = "MemFree:";
   float Total = findValueByKey<float>(memTotal, kMeminfoFilename);
   float Free = findValueByKey<float>(memFree, kMeminfoFilename);
-  return (Total -Free) / Total;
+  return (Total - Free) / Total;
 }
-
 
 long LinuxParser::UpTime() {
   string uptime;
@@ -207,13 +217,8 @@ int LinuxParser::RunningProcesses() {
 }
 
 string LinuxParser::Command(int pid) {
-  string line;
-  std::ifstream stream(kProcDirectory + to_string(pid) + kCmdlineFilename);
-  if (stream.is_open()) {
-    std::getline(stream, line);
-  }
-  stream.close();
-  return line;
+  return std::string(
+      getValueOfFile<std::string>(std::to_string(pid) + kCmdlineFilename));
 }
 
 string LinuxParser::Ram(int pid) {
@@ -224,10 +229,11 @@ string LinuxParser::Ram(int pid) {
       std::replace(line.begin(), line.end(), ':', ' ');
       std::istringstream stringline(line);
       while (stringline >> key) {
-        //Using VmRSS instead of VmSize. VmSize is the sum of all the virtual memory,
-        //it will give us more than the real Physical RAM size, the VmRSS will give us exact
-        //physical memory being used as a part of Physical RAM.
-        if (key == "VmRSS") {            
+        // Using VmRSS instead of VmSize. VmSize is the sum of all the virtual
+        // memory, it will give us more than the real Physical RAM size, the
+        // VmRSS will give us exact physical memory being used as a part of
+        // Physical RAM.
+        if (key == "VmRSS") {
           stringline >> value;
           stream.close();
           return to_string(stol(value) / 1024);
