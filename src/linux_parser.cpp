@@ -16,6 +16,25 @@ using std::string;
 using std::to_string;
 using std::vector;
 
+template<typename T>
+T findValueByKey(std::string const &keyFilter, std::string const &filename){
+  std::string line, key;
+  T value;
+
+  std::ifstream stream(LinuxParser::kProcDirectory + filename);
+  if(stream.is_open()){
+    while(std::getline(stream, line)){
+      std::istringstream linestream(line);
+      while(linestream>>key>>value){
+        if(key == keyFilter){
+          return value;
+        }
+      }
+    }
+  }
+  return value;
+};
+
 string LinuxParser::OperatingSystem() {
   string line;
   string key;
@@ -73,33 +92,11 @@ vector<int> LinuxParser::Pids() {
 }
 
 float LinuxParser::MemoryUtilization() {
-  float total, free;
-  int count = 0;
-  string name, line;
-  std::ifstream stream(kProcDirectory + kMeminfoFilename);
-  if (stream.is_open()) {
-    while (std::getline(stream, line)) {
-      std::replace(line.begin(), line.end(), ':', ' ');
-      std::istringstream linestream(line);
-      while (linestream >> name) {
-        count++;
-        if (name == "MemTotal") {
-          linestream >> total;
-          break;
-        }
-        if (name == "MemFree") {
-          linestream >> free;
-          break;
-        }
-      }
-      if (count == 2) break;
-    }
-  }
-  float res = (total - free) / total;
-  long ans = res * 1000;
-  res = ans / 1000.0;
-  stream.close();
-  return float(res);
+  std::string memTotal = "MemTotal:";
+  std::string memFree = "MemFree:";
+  float Total = findValueByKey<float>(memTotal, kMeminfoFilename);
+  float Free = findValueByKey<float>(memFree, kMeminfoFilename);
+  return (Total -Free) / Total;
 }
 
 
@@ -128,11 +125,11 @@ long LinuxParser::ActiveJiffies(int pid) {
     std::getline(stream, line);
     std::istringstream linestream(line);
     while (linestream >> value) {
-      values.push_back(value);
+      values.emplace_back(value);
     }
   }
   stream.close();
-  return stol(values[13] + values[14]);
+  return stol(values[13]) + stol(values[14]);
 }
 
 long LinuxParser::ActiveJiffies() {
@@ -227,7 +224,10 @@ string LinuxParser::Ram(int pid) {
       std::replace(line.begin(), line.end(), ':', ' ');
       std::istringstream stringline(line);
       while (stringline >> key) {
-        if (key == "VmSize") {
+        //Using VmRSS instead of VmSize. VmSize is the sum of all the virtual memory,
+        //it will give us more than the real Physical RAM size, the VmRSS will give us exact
+        //physical memory being used as a part of Physical RAM.
+        if (key == "VmRSS") {            
           stringline >> value;
           stream.close();
           return to_string(stol(value) / 1024);
@@ -290,7 +290,7 @@ long LinuxParser::UpTime(int pid) {
       if (count == 22) break;
     }
     stream.close();
-    return LinuxParser::UpTime() - (stol(value) / 100);
+    return LinuxParser::UpTime() - sysconf(stol(value));
   }
   stream.close();
   return 0;
