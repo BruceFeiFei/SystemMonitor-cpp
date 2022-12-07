@@ -20,9 +20,9 @@ Process::Process(int pid) { pid_ = pid; }
 int Process::Pid() const { return pid_; }
 
 float Process::CpuUtilization() {
-  float total = float(LinuxParser::ActiveJiffies(Pid())) / 100.f;
+  float total = float(LinuxParser::ActiveJiffies(Pid())) / sysconf(_SC_CLK_TCK);
   float sec = float(LinuxParser::UpTime(Pid()));
-  float u = 100 * (total / sec / 100.f);
+  float u =  (total / sec);
   return u;
 }
 

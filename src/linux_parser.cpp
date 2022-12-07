@@ -296,7 +296,7 @@ long LinuxParser::UpTime(int pid) {
       if (count == 22) break;
     }
     stream.close();
-    return LinuxParser::UpTime() - sysconf(stol(value));
+    return LinuxParser::UpTime() - (stol(value) / sysconf(_SC_CLK_TCK));
   }
   stream.close();
   return 0;
